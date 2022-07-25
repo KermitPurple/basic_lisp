@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use std::iter::{Peekable, Map};
+use std::iter::Peekable;
 use std::io::{self, Read};
 
 #[derive(PartialEq, Clone, Debug)]
@@ -19,16 +19,20 @@ struct TokenIterator {
 
 impl TokenIterator {
     fn new() -> Self {
-        Self::from_box_iter(Box::new(io::stdin().bytes().map(Result::unwrap)))
+        Self::from_iter(io::stdin().bytes().map(Result::unwrap))
     }
 
     fn from_str(s: &'static str) -> Self {
-        Self::from_box_iter(Box::new(s.bytes()))
+        Self::from_iter(s.bytes())
         
     }
 
     fn from_box_iter(it: BoxIter) -> Self {
         Self { it: it.peekable() }
+    }
+
+    fn from_iter<T: Iterator<Item = u8> + 'static>(it: T) -> Self {
+        Self::from_box_iter(Box::new(it))
     }
 }
 
