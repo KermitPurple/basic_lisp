@@ -11,32 +11,28 @@ enum Token {
     Float(f64),
 }
 
-struct TokenIterator<T: Iterator<Item = u8>> {
-    it: Peekable<T>,
+type BoxIter = Box<dyn Iterator<Item = u8>>;
+
+struct TokenIterator {
+    it: Peekable<BoxIter>,
 }
 
-impl TokenIterator<Map<io::Bytes<io::Stdin>, fn(io::Result<u8>) -> u8>> {
+impl TokenIterator {
     fn new() -> Self {
-        Self {
-            it: io::stdin()
-                .bytes()
-                .map(Result::unwrap as fn(_) -> _)
-                .peekable()
-        }
+        Self::from_box_iter(Box::new(io::stdin().bytes().map(Result::unwrap)))
     }
-}
 
-impl TokenIterator<std::str::Bytes<'static>> {
     fn from_str(s: &'static str) -> Self {
-        Self {
-            it: s.bytes()
-                .peekable()
-        }
+        Self::from_box_iter(Box::new(s.bytes()))
         
     }
+
+    fn from_box_iter(it: BoxIter) -> Self {
+        Self { it: it.peekable() }
+    }
 }
 
-impl<T: Iterator<Item = u8>> Iterator for TokenIterator<T> {
+impl Iterator for TokenIterator {
     type Item = Result<Token, char>;
 
     fn next(&mut self) -> Option<Self::Item> {
