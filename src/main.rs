@@ -19,19 +19,23 @@ struct TokenIterator {
 
 impl TokenIterator {
     fn new() -> Self {
-        Self::from_iter(io::stdin().bytes().map(Result::unwrap))
+        io::stdin()
+            .bytes()
+            .map(Result::unwrap)
+            .into()
     }
 
     fn from_str(s: &'static str) -> Self {
-        Self::from_iter(s.bytes())
-        
+        Self::from(s.bytes())
     }
 
     fn from_box_iter(it: BoxIter) -> Self {
         Self { it: it.peekable() }
     }
+}
 
-    fn from_iter<T: Iterator<Item = u8> + 'static>(it: T) -> Self {
+impl<T: Iterator<Item = u8> + 'static> From<T> for TokenIterator {
+    fn from(it: T) -> Self {
         Self::from_box_iter(Box::new(it))
     }
 }
