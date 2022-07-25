@@ -37,7 +37,7 @@ impl TokenIterator<std::str::Bytes<'static>> {
 }
 
 impl<T: Iterator<Item = u8>> Iterator for TokenIterator<T> {
-    type Item = Result<Token, u8>;
+    type Item = Result<Token, char>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut state = State::Start;
@@ -47,15 +47,7 @@ impl<T: Iterator<Item = u8>> Iterator for TokenIterator<T> {
             let ch = byte as char;
             let mut used_ch = true;
             match (state, ch) {
-                (_, ' ' | '\n' | '\t' | '\r') => {
-                    used_ch = state == State::Start;
-                    match state {
-                        State::Start => (),
-                        State::Ident => result = Some(Ok(Token::Ident(partial.clone()))),
-                        State::Int => result = Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
-                        State::Float => result = Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
-                    }
-                },
+                (State::Start, ' ' | '\n' | '\t' | '\r') => (), 
                 (State::Start, '(') => result = Some(Ok(Token::LParen)),
                 (State::Start, ')') => result = Some(Ok(Token::RParen)),
                 (State::Start, 'a'..='z' | 'A'..='Z' | '_') => {
@@ -73,7 +65,15 @@ impl<T: Iterator<Item = u8>> Iterator for TokenIterator<T> {
                     partial.push(ch);
                 }
                 (State::Ident, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9') => partial.push(ch),
-                _ => result = Some(Err(byte)),
+                _ => {
+                    used_ch = state == State::Start;
+                    match state {
+                        State::Start => result = Some(Err(ch)),
+                        State::Ident => result = Some(Ok(Token::Ident(partial.clone()))),
+                        State::Int => result = Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
+                        State::Float => result = Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
+                    }
+                },
             }
             if used_ch {
                 self.it.next();
@@ -110,11 +110,20 @@ mod tests {
         assert_eq!(it.next(), Some(Ok(Token::Ident("abc".to_string()))));
         assert_eq!(it.next(), Some(Ok(Token::Int(123))));
         assert_eq!(it.next(), Some(Ok(Token::Float(1.3))));
-        assert_eq!(it.next(), Some(Err(b'=')));
+        assert_eq!(it.next(), Some(Err('=')));
+        assert_eq!(it.next(), Some(Ok(Token::RParen)));
+        assert_eq!(it.next(), None);
+        it = TokenIterator::from_str("(xyz()");
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
+        assert_eq!(it.next(), Some(Ok(Token::Ident("xyz".to_string()))));
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
         assert_eq!(it.next(), Some(Ok(Token::RParen)));
         assert_eq!(it.next(), None);
     }
 }
 
 fn main() {
+    for token in TokenIterator::new() {
+        println!("{:?}", token);
+    }
 }
