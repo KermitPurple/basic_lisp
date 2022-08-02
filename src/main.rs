@@ -51,10 +51,10 @@ impl Iterator for TokenIterator {
                 (State::Start, 'a'..='z' | 'A'..='Z' | '_') => state = State::Ident,
                 (State::Start, '0'..='9') => state = State::Int,
                 (State::Start | State::Int, '.') => state = State::Float,
-                (State::Float, '.') |
-                (State::Int | State::Float, 'a'..='z' | 'A'..='Z') => state = State::Error,
-                (State::Int | State::Float, '0'..='9') |
-                (State::Ident | State::Error, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_') => (),
+                (State::Int | State::Float, 'a'..='z' | 'A'..='Z')
+                | (State::Float, '.') => state = State::Error,
+                (State::Ident | State::Error, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
+                | (State::Int | State::Float, '0'..='9') => (),
                 _ => {
                     if state != State::Start {
                         assert!(self.ungotten.is_none());
