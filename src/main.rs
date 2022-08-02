@@ -74,11 +74,11 @@ impl Iterator for TokenIterator {
                     if state != State::Start {
                         self.ungotten = Some(byte);
                     }
-                    match state {
-                        State::Start => return Some(Err(ch)),
-                        State::Ident => return Some(Ok(Token::Ident(partial))),
-                        State::Int => return Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
-                        State::Float => return Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
+                    return match state {
+                        State::Start => Some(Err(ch)),
+                        State::Ident => Some(Ok(Token::Ident(partial))),
+                        State::Int => Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
+                        State::Float => Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
                     }
                 },
             }
