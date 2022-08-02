@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use std::io::{self, Read};
+use std::str::FromStr;
 
 #[derive(PartialEq, Clone, Debug)]
 enum Token {
@@ -19,10 +19,7 @@ struct TokenIterator {
 
 impl TokenIterator {
     fn new() -> Self {
-        io::stdin()
-            .bytes()
-            .map(Result::unwrap)
-            .into()
+        io::stdin().bytes().map(Result::unwrap).into()
     }
 
     fn from_str(s: &'static str) -> Self {
@@ -30,10 +27,7 @@ impl TokenIterator {
     }
 
     fn from_box_iter(it: BoxIter) -> Self {
-        Self {
-            it,
-            ungotten: None,
-        }
+        Self { it, ungotten: None }
     }
 }
 
@@ -52,7 +46,7 @@ impl Iterator for TokenIterator {
         while let Some(byte) = self.ungotten.take().or_else(|| self.it.next()) {
             let ch = byte as char;
             match (state, ch) {
-                (State::Start, ' ' | '\n' | '\t' | '\r') => (), 
+                (State::Start, ' ' | '\n' | '\t' | '\r') => (),
                 (State::Start, '(') => return Some(Ok(Token::LParen)),
                 (State::Start, ')') => return Some(Ok(Token::RParen)),
                 (State::Start, 'a'..='z' | 'A'..='Z' | '_') => {
@@ -79,8 +73,8 @@ impl Iterator for TokenIterator {
                         State::Ident => Some(Ok(Token::Ident(partial))),
                         State::Int => Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
                         State::Float => Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
-                    }
-                },
+                    };
+                }
             }
         }
         None
