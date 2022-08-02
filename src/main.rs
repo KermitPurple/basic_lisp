@@ -25,15 +25,14 @@ impl TokenIterator {
     fn from_str(s: &'static str) -> Self {
         Self::from(s.bytes())
     }
-
-    fn from_box_iter(it: BoxIter) -> Self {
-        Self { it, ungotten: None }
-    }
 }
 
 impl<T: Iterator<Item = u8> + 'static> From<T> for TokenIterator {
-    fn from(it: T) -> Self {
-        Self::from_box_iter(Box::new(it))
+    fn from(iter: T) -> Self {
+        Self {
+            it: Box::new(iter.chain([b' '])),
+            ungotten: None,
+        }
     }
 }
 
@@ -110,6 +109,59 @@ mod tests {
         assert_eq!(it.next(), Some(Ok(Token::LParen)));
         assert_eq!(it.next(), Some(Ok(Token::RParen)));
         assert_eq!(it.next(), None);
+    }
+
+    #[test]
+    fn parens_test() {
+        let mut it = TokenIterator::from_str("()(()))()(");
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
+        assert_eq!(it.next(), Some(Ok(Token::RParen)));
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
+        assert_eq!(it.next(), Some(Ok(Token::RParen)));
+        assert_eq!(it.next(), Some(Ok(Token::RParen)));
+        assert_eq!(it.next(), Some(Ok(Token::RParen)));
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
+        assert_eq!(it.next(), Some(Ok(Token::RParen)));
+        assert_eq!(it.next(), Some(Ok(Token::LParen)));
+    }
+
+    #[test]
+    fn int_test() {
+        let mut it = TokenIterator::from_str("123 1 2 3 456");
+        assert_eq!(it.next(), Some(Ok(Token::Int(123))));
+        assert_eq!(it.next(), Some(Ok(Token::Int(1))));
+        assert_eq!(it.next(), Some(Ok(Token::Int(2))));
+        assert_eq!(it.next(), Some(Ok(Token::Int(3))));
+        assert_eq!(it.next(), Some(Ok(Token::Int(456))));
+    }
+
+    #[test]
+    fn float_test() {
+        let mut it = TokenIterator::from_str("1.23 1.55 1.0 9999.3");
+        assert_eq!(it.next(), Some(Ok(Token::Float(1.23))));
+        assert_eq!(it.next(), Some(Ok(Token::Float(1.55))));
+        assert_eq!(it.next(), Some(Ok(Token::Float(1.0))));
+        assert_eq!(it.next(), Some(Ok(Token::Float(9999.3))));
+    }
+
+    #[test]
+    fn ident_test() {
+        let mut it = TokenIterator::from_str("name a1 snake_case PascalCase _1");
+        assert_eq!(it.next(), Some(Ok(Token::Ident("name".to_string()))));
+        assert_eq!(it.next(), Some(Ok(Token::Ident("a1".to_string()))));
+        assert_eq!(it.next(), Some(Ok(Token::Ident("snake_case".to_string()))));
+        assert_eq!(it.next(), Some(Ok(Token::Ident("PascalCase".to_string()))));
+        assert_eq!(it.next(), Some(Ok(Token::Ident("_1".to_string()))));
+    }
+
+    #[test]
+    fn error_test() {
+        let mut it = TokenIterator::from_str("1a 123abc 1.2.3 1.3abc");
+        assert_eq!(it.next(), Some(Err("1a".to_string())));
+        assert_eq!(it.next(), Some(Err("123abc".to_string())));
+        assert_eq!(it.next(), Some(Err("1.2.3".to_string())));
+        assert_eq!(it.next(), Some(Err("1.3abc".to_string())));
     }
 
     #[test]
