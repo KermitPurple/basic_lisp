@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::iter::Peekable;
 use std::io::{self, Read};
 
 #[derive(PartialEq, Clone, Debug)]
@@ -14,7 +13,8 @@ enum Token {
 type BoxIter = Box<dyn Iterator<Item = u8>>;
 
 struct TokenIterator {
-    it: Peekable<BoxIter>,
+    it: BoxIter,
+    ungotten: Option<u8>,
 }
 
 impl TokenIterator {
@@ -30,7 +30,10 @@ impl TokenIterator {
     }
 
     fn from_box_iter(it: BoxIter) -> Self {
-        Self { it: it.peekable() }
+        Self {
+            it,
+            ungotten: None,
+        }
     }
 }
 
@@ -46,14 +49,12 @@ impl Iterator for TokenIterator {
     fn next(&mut self) -> Option<Self::Item> {
         let mut state = State::Start;
         let mut partial = String::new();
-        let mut result = None;
-        while let Some(&byte) = self.it.peek() {
+        while let Some(byte) = self.ungotten.take().or_else(|| self.it.next()) {
             let ch = byte as char;
-            let mut used_ch = true;
             match (state, ch) {
                 (State::Start, ' ' | '\n' | '\t' | '\r') => (), 
-                (State::Start, '(') => result = Some(Ok(Token::LParen)),
-                (State::Start, ')') => result = Some(Ok(Token::RParen)),
+                (State::Start, '(') => return Some(Ok(Token::LParen)),
+                (State::Start, ')') => return Some(Ok(Token::RParen)),
                 (State::Start, 'a'..='z' | 'A'..='Z' | '_') => {
                     state = State::Ident;
                     partial.push(ch);
@@ -70,20 +71,16 @@ impl Iterator for TokenIterator {
                 }
                 (State::Ident, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9') => partial.push(ch),
                 _ => {
-                    used_ch = state == State::Start;
+                    if state != State::Start {
+                        self.ungotten = Some(byte);
+                    }
                     match state {
-                        State::Start => result = Some(Err(ch)),
-                        State::Ident => result = Some(Ok(Token::Ident(std::mem::take(&mut partial)))),
-                        State::Int => result = Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
-                        State::Float => result = Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
+                        State::Start => return Some(Err(ch)),
+                        State::Ident => return Some(Ok(Token::Ident(std::mem::take(&mut partial)))),
+                        State::Int => return Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
+                        State::Float => return Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
                     }
                 },
-            }
-            if used_ch {
-                self.it.next();
-            }
-            if result.is_some() {
-                return result;
             }
         }
         None
