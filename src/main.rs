@@ -76,7 +76,7 @@ impl Iterator for TokenIterator {
                     }
                     match state {
                         State::Start => return Some(Err(ch)),
-                        State::Ident => return Some(Ok(Token::Ident(std::mem::take(&mut partial)))),
+                        State::Ident => return Some(Ok(Token::Ident(partial))),
                         State::Int => return Some(Ok(Token::Int(i64::from_str(&partial).unwrap()))),
                         State::Float => return Some(Ok(Token::Float(f64::from_str(&partial).unwrap()))),
                     }
