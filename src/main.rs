@@ -50,8 +50,10 @@ impl Iterator for TokenIterator {
                 (State::Start, '(') => return Some(Ok(Token::LParen)),
                 (State::Start, ')') => return Some(Ok(Token::RParen)),
                 (State::Start, 'a'..='z' | 'A'..='Z' | '_') => state = State::Ident,
-                (State::Start | State::Int | State::Float, '0'..='9') => if state == State::Start {
-                    state = State::Int;
+                (State::Start | State::Int | State::Float, '0'..='9') => {
+                    if state == State::Start {
+                        state = State::Int;
+                    }
                 }
                 (State::Start | State::Int, '.') => state = State::Float,
                 (State::Int | State::Float, 'a'..='z' | 'A'..='Z') => state = State::Error,
