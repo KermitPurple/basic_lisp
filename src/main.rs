@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn token_iterator_new_test() {
-        let it = TokenIterator::new();
+        let _it = TokenIterator::new();
     }
 
     #[test]
